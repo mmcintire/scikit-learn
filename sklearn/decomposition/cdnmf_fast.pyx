@@ -21,21 +21,24 @@ def _update_cdnmf_fast(double[:, ::1] W, double[:, ::1] Ht, double[:, :] HHt, do
         for s in range(n_components):
             t = permutation[s]
 
-            for i in range(n_samples):
-                # gradient = GW[t, i] where GW = np.dot(W, HHt) - XHt
-                grad = -XHt[i, t]
+            if w_free_cols[t]==1:
+                for i in range(n_samples):
+                    # gradient = GW[t, i] where GW = np.dot(W, HHt) - XHt
+                    grad = -XHt[i, t]
 
-                for r in range(n_components):
-                    grad += HHt[t, r] * W[i, r]
+                    for r in range(n_components):
+                        grad += HHt[t, r] * W[i, r]
 
-                # projected gradient
-                pg = min(0., grad) if W[i, t] == 0 else grad
-                violation += fabs(pg)
+                    # projected gradient
+                    pg = min(0., grad) if W[i, t] == 0 else grad
+                    violation += fabs(pg)
 
-                # Hessian
-                hess = HHt[t, t]
+                    # Hessian
+                    hess = HHt[t, t]
 
-                if hess != 0:
-                    W[i, t] = max(W[i, t] - grad / hess, 0.)
+                    if hess != 0:
+                        W[i, t] = max(W[i, t] - grad / hess, 0.)
+            else:
+                break
                 
     return violation

@@ -367,7 +367,7 @@ def _initialize_nmf(X, n_components, init=None, eps=1e-6,
 
 
 def _update_coordinate_descent(X, W, Ht, l1_reg, l2_reg, shuffle,
-                               random_state):
+                               random_state, w_free_cols):
     """Helper function for _fit_coordinate_descent
 
     Update W to minimize the objective function, iterating once over all
@@ -394,7 +394,7 @@ def _update_coordinate_descent(X, W, Ht, l1_reg, l2_reg, shuffle,
         permutation = np.arange(n_components)
     # The following seems to be required on 64-bit Windows w/ Python 3.5.
     permutation = np.asarray(permutation, dtype=np.intp)
-    return _update_cdnmf_fast(W, HHt, XHt, permutation)
+    return _update_cdnmf_fast(W, Ht, HHt, XHt, permutation, w_free_cols)
 
 
 def _fit_coordinate_descent(X, W, H, tol=1e-4, max_iter=200, l1_reg_W=0,
@@ -475,13 +475,16 @@ def _fit_coordinate_descent(X, W, H, tol=1e-4, max_iter=200, l1_reg_W=0,
     for n_iter in range(max_iter):
         violation = 0.
 
+        w_free_cols = np.ones((W.shape[1],))
+        ht_free_cols = np.ones((H.shape[0],))
+
         # Update W
         violation += _update_coordinate_descent(X, W, Ht, l1_reg_W,
-                                                l2_reg_W, shuffle, rng)
+                                                l2_reg_W, shuffle, rng, w_free_cols)
         # Update H
         if update_H:
             violation += _update_coordinate_descent(X.T, Ht, W, l1_reg_H,
-                                                    l2_reg_H, shuffle, rng)
+                                                    l2_reg_H, shuffle, rng, ht_free_cols)
 
         if n_iter == 0:
             violation_init = violation

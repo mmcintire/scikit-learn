@@ -15,6 +15,7 @@ import numbers
 import time
 
 import numpy as np
+import numpy.random
 import scipy.sparse as sp
 
 from ..base import BaseEstimator, TransformerMixin
@@ -479,12 +480,17 @@ def _fit_coordinate_descent(X, W, H, tol=1e-4, max_iter=200, l1_reg_W=0,
     for n_iter in range(max_iter):
         violation = 0.
 
-        w_free_cols = np.ones((W.shape[1],)).astype('int32')
-        ht_free_cols = np.ones((H.shape[0],)).astype('int32')
+        w_free_cols = np.ones((W.shape[1],))
+        ht_free_cols = np.ones((H.shape[0],))
+
+        w_free_cols = np.random.randint(2, size=w_free_cols.shape)
+        ht_free_cols = np.random.randint(2, size=ht_free_cols.shape)
 
         # Update W, H
         if not update_H:
-            ht_free_cols = np.zeros((H.shape[0],)).astype('int32') 
+            ht_free_cols = np.zeros((H.shape[0],))
+        w_free_cols = w_free_cols.astype('int32')
+        ht_free_cols = ht_free_cols.astype('int32') 
         violation += _update_coordinate_descent(X, W, Ht, l1_reg_W,
                                                 l2_reg_W, shuffle, rng, w_free_cols, ht_free_cols) 
            

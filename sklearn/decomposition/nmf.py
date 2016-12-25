@@ -367,7 +367,7 @@ def _initialize_nmf(X, n_components, init=None, eps=1e-6,
 
 
 def _update_coordinate_descent(X, W, Ht, l1_reg, l2_reg, shuffle,
-                               random_state, w_free_cols):
+                               random_state, w_free_cols, ht_free_cols):
     """Helper function for _fit_coordinate_descent
 
     Update W to minimize the objective function, iterating once over all
@@ -378,8 +378,10 @@ def _update_coordinate_descent(X, W, Ht, l1_reg, l2_reg, shuffle,
     n_components = Ht.shape[1]
 
     HHt = fast_dot(Ht.T, Ht)
+    WtW = fast_dot(W.T, W)
     XHt = safe_sparse_dot(X, Ht)
-
+    XW = safe_sparse_dot(X, W)
+   
     # L2 regularization corresponds to increase of the diagonal of HHt
     if l2_reg != 0.:
         # adds l2_reg only on the diagonal
@@ -394,7 +396,9 @@ def _update_coordinate_descent(X, W, Ht, l1_reg, l2_reg, shuffle,
         permutation = np.arange(n_components)
     # The following seems to be required on 64-bit Windows w/ Python 3.5.
     permutation = np.asarray(permutation, dtype=np.intp)
-    return _update_cdnmf_fast(W, Ht, HHt, XHt, permutation, w_free_cols)
+    W_update = _update_cdnmf_fast(W, Ht, HHt, WtW, XHt, XW, permutation, w_free_cols)
+    H_update = _update_cdnmf_fast(Ht, W, WtW, HHt, XW, XHt, permutation, ht_free_cols)
+    return W_update + H_update
 
 
 def _fit_coordinate_descent(X, W, H, tol=1e-4, max_iter=200, l1_reg_W=0,
@@ -478,13 +482,12 @@ def _fit_coordinate_descent(X, W, H, tol=1e-4, max_iter=200, l1_reg_W=0,
         w_free_cols = np.ones((W.shape[1],)).astype('int32')
         ht_free_cols = np.ones((H.shape[0],)).astype('int32')
 
-        # Update W
+        # Update W, H
+        if not update_H:
+            ht_free_cols = np.zeros((H.shape[0],)).astype('int32') 
         violation += _update_coordinate_descent(X, W, Ht, l1_reg_W,
-                                                l2_reg_W, shuffle, rng, w_free_cols)
-        # Update H
-        if update_H:
-            violation += _update_coordinate_descent(X.T, Ht, W, l1_reg_H,
-                                                    l2_reg_H, shuffle, rng, ht_free_cols)
+                                                l2_reg_W, shuffle, rng, w_free_cols, ht_free_cols) 
+           
 
         if n_iter == 0:
             violation_init = violation

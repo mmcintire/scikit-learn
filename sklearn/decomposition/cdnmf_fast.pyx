@@ -11,7 +11,7 @@ from libc.math cimport fabs
 
 def _update_cdnmf_fast(double[:, ::1] W, double[:, ::1] Ht,
                        double[:, :] HHt, double[:, :] WtW,
-                       double[:, :] XHt, double[:, :] XW,
+                       double[:, :] XHt, double[:, :] XtW,
                        Py_ssize_t[::1] permutation, int[::1] w_free_cols):
     cdef double violation = 0
     cdef Py_ssize_t n_components = W.shape[1]
@@ -43,7 +43,7 @@ def _update_cdnmf_fast(double[:, ::1] W, double[:, ::1] Ht,
                         W[i, t] = max(W[i, t] - grad / hess, 0.)
             else:
                 for i in range(n_features):
-                    grad = -XW[i, t] ###
+                    grad = -XtW[i, t] ###
 
                     for r in range(n_components):
                         grad += WtW[t, r] * Ht[i,r] ###

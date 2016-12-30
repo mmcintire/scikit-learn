@@ -485,15 +485,15 @@ def _fit_coordinate_descent(X, W, H, tol=1e-4, max_iter=200, l1_reg_W=0,
     for n_iter in range(max_iter):
         violation = 0.
 
-        if selection is None:
-            w_free_cols = np.ones(W.shape[1])
-            ht_free_cols = np.ones(H.shape[0])
-        elif selection == 'Random':
+        if selection == 'Random':
             w_free_cols = np.random.randint(2, size=W.shape[1])
             ht_free_cols = np.random.randint(2, size=H.shape[0])
         elif selection == 'Semirandom':
             w_free_cols = np.random.randint(2, size=W.shape[1])
             ht_free_cols = 1. - w_free_cols
+        else:
+            w_free_cols = np.ones(W.shape[1])
+            ht_free_cols = np.ones(H.shape[0])
 
         # Update W, H
         w_free_cols = w_free_cols.astype('int32')

@@ -11,7 +11,7 @@ from libc.math cimport fabs
 
 def _update_cdnmf_fast(double[:, ::1] W, double[:, ::1] Ht,
                        double[:, :] HHt, double[:, :] WtW,
-                       double[:, :] XHt, double[:, :] XtW,
+                       double[:, :] XHt, double[:, :] XtW, double[:, :] X,
                        Py_ssize_t[::1] permutation, int[::1] w_free_cols):
     cdef double violation = 0
     cdef Py_ssize_t n_components = W.shape[1]
@@ -19,6 +19,7 @@ def _update_cdnmf_fast(double[:, ::1] W, double[:, ::1] Ht,
     cdef Py_ssize_t n_features = Ht.shape[0] 
     cdef double grad, pg, hess
     cdef Py_ssize_t i, r, s, t
+    cdef double old_val, iter_change
 
     with nogil:
         for s in range(n_components):
@@ -40,13 +41,25 @@ def _update_cdnmf_fast(double[:, ::1] W, double[:, ::1] Ht,
                     hess = HHt[t, t]
 
                     if hess != 0:
+                        old_val = W[i, t]
                         W[i, t] = max(W[i, t] - grad / hess, 0.)
+                        iter_change = W[i, t] - old_val
+
+                        # update WtW and XtW
+                        for r in range(n_components):
+                            if r == t:
+                                WtW[r, t] += W[i, t]**2 - old_val**2
+                            else:
+                                WtW[r, t] += W[i, r] * iter_change
+                        
+                        for r in range(n_features):
+                            XtW[r, t] += X[i, r] * iter_change  
             else:
                 for i in range(n_features):
                     grad = -XtW[i, t] ###
 
                     for r in range(n_components):
-                        grad += WtW[t, r] * Ht[i,r] ###
+                        grad += WtW[t, r] * Ht[i, r] ###
 
                     pg = min(0., grad) if Ht[i, t] == 0 else grad 
                     violation += fabs(pg)
@@ -54,6 +67,17 @@ def _update_cdnmf_fast(double[:, ::1] W, double[:, ::1] Ht,
                     hess = WtW[t, t] ###
 
                     if hess != 0:
+                        old_val = Ht[i, t]
                         Ht[i, t] = max(Ht[i, t] - grad / hess, 0.)
-                
+                        iter_change = Ht[i, t] - old_val
+                        
+                        # update HHt and XHt 
+                        for r in range(n_components):
+                            if r == t:
+                                HHt[r, t] += Ht[i, t]**2 - old_val**2
+                            else:
+                                HHt[r, t] += Ht[i, r] * iter_change
+    
+                        for r in range(n_samples):
+                            XHt[r, t] += X[r, i] * iter_change
     return violation

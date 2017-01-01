@@ -397,9 +397,9 @@ def _update_coordinate_descent(X, W, Ht, l1_reg, l2_reg, shuffle,
         permutation = np.arange(n_components)
     # The following seems to be required on 64-bit Windows w/ Python 3.5.
     permutation = np.asarray(permutation, dtype=np.intp)
-    W_update = _update_cdnmf_fast(W, Ht, HHt, WtW, XHt, XtW, permutation, w_free_cols)
+    W_update = _update_cdnmf_fast(W, Ht, HHt, WtW, XHt, XtW, X, permutation, w_free_cols)
     if ht_free_cols is not None:
-        H_update = _update_cdnmf_fast(Ht, W, WtW, HHt, XtW, XHt, permutation, ht_free_cols)
+        H_update = _update_cdnmf_fast(Ht, W, WtW, HHt, XtW, XHt, X.T, permutation, ht_free_cols)
     else:
         H_update = 0. 
     iter_res = W_update + H_update

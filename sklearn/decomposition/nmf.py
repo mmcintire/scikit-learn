@@ -382,7 +382,19 @@ def _update_coordinate_descent(X, W, Ht, l1_reg, l2_reg, shuffle,
     WtW = fast_dot(W.T, W)
     XHt = safe_sparse_dot(X, Ht)
     XtW = safe_sparse_dot(X.T, W)
-   
+  
+    if(w_free_cols.shape==() and w_free_cols==-1):
+        # greedy
+        gradW = XHt - np.dot(W,HHt)
+        gradHt = XtW - np.dot(Ht, WtW)
+        
+        W_col = np.sum(np.abs(gradW), axis=0)
+        Ht_col = np.sum(np.abs(gradHt), axis=0)
+        
+        w_free_cols = (W_col > Ht_col).astype('int32')      
+        if(ht_free_cols is not None): 
+            ht_free_cols = w_free_cols.astype('int32') 
+
     # L2 regularization corresponds to increase of the diagonal of HHt
     if l2_reg != 0.:
         # adds l2_reg only on the diagonal
@@ -491,13 +503,20 @@ def _fit_coordinate_descent(X, W, H, tol=1e-4, max_iter=200, l1_reg_W=0,
         elif selection == 'Semirandom':
             w_free_cols = np.random.randint(2, size=W.shape[1])
             ht_free_cols = 1. - w_free_cols
+        elif selection == 'Semigreedy':
+            w_free_cols = np.array(-1)
+            ht_free_cols = 1. - w_free_cols
+        elif selection == 'Greedy':
+            w_free_cols = np.array(-1)
+            ht_free_cols = None 
         else:
             w_free_cols = np.ones(W.shape[1])
             ht_free_cols = np.ones(H.shape[0])
 
         # Update W, H
-        w_free_cols = w_free_cols.astype('int32')
-        ht_free_cols = ht_free_cols.astype('int32') 
+        if ht_free_cols is not None:
+            w_free_cols = w_free_cols.astype('int32')
+            ht_free_cols = ht_free_cols.astype('int32') 
         if not update_H:
             ht_free_cols = None
             w_free_cols = np.ones(W.shape[1]).astype('int32')
